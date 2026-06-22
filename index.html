@@ -76,7 +76,23 @@ input.addEventListener("keydown", function(event){
             terminal.innerHTML += "\nSYSTEM:\nCommand not recognized.\n";
 
         }
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAwGfqHi429gD7nWwYGpDTJu_HD8VH2TTw",
+  authDomain: "pony-palace-5a579.firebaseapp.com",
+  projectId: "pony-palace-5a579",
+  storageBucket: "pony-palace-5a579.firebasestorage.app",
+  messagingSenderId: "343906921946",
+  appId: "1:343906921946:web:87848ca367fca0800a64e3"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
         terminal.innerHTML += "\n>\n";
 
         input.value = "";
