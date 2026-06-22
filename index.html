@@ -14,51 +14,80 @@
             flex-direction: column;
             height: 95vh;
             text-shadow: 0 0 5px #00ff00; 
+            overflow: hidden;
         }
 
+        /* Container now tightly wraps text to eliminate dead space */
         #terminal-container {
             flex: 1;
             overflow-y: auto;
-            margin-bottom: 20px;
-            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Keeps text stacked at the top */
         }
 
         #terminal {
             white-space: pre-wrap;
+            display: inline;
         }
 
         .input-line {
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            width: 100%;
         }
 
         .prompt {
             color: #00ff00;
-            margin-right: 10px;
+            margin-right: 5px;
         }
 
+        /* Invisible real input box, capturing keystrokes in the background */
         #input {
-            background: black;
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Fake terminal view container */
+        #fake-input-container {
+            display: inline-flex;
+            align-items: center;
             color: #00ff00;
-            border: none;
-            outline: none;
-            font-family: 'Courier New', monospace;
             font-size: 16px;
-            flex: 1;
-            text-shadow: 0 0 5px #00ff00;
+        }
+
+        /* The retro blinking underscore cursor */
+        #cursor {
+            display: inline-block;
+            width: 10px;
+            height: 3px;
+            background-color: #00ff00;
+            margin-left: 2px;
+            animation: blink 0.8s infinite steps(2, start);
+            box-shadow: 0 0 5px #00ff00;
+            vertical-align: bottom;
+            margin-bottom: 2px;
+        }
+
+        @keyframes blink {
+            to { visibility: hidden; }
         }
     </style>
 </head>
 <body>
 
 <div id="terminal-container">
-    <div id="terminal"></div>
+    <div>
+        <div id="terminal"></div>
+        <span class="input-line">
+            <span class="prompt" id="prompt-char">KEY:</span>
+            <span id="fake-input-container"><span id="fake-text"></span><span id="cursor"></span></span>
+        </span>
+    </div>
 </div>
 
-<div class="input-line">
-    <span class="prompt" id="prompt-char">&gt;</span>
-    <input id="input" autocomplete="off" autofocus>
-</div>
+<input id="input" autocomplete="off" autofocus>
 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -82,19 +111,25 @@ const chatRef = database.ref("messages");
 const terminal = document.getElementById("terminal");
 const container = document.getElementById("terminal-container");
 const input = document.getElementById("input");
+const fakeText = document.getElementById("fake-text");
 const promptChar = document.getElementById("prompt-char");
 
-// Keep input focused
+// Keep hidden input focused on click
 document.addEventListener("click", () => input.focus());
 
 // --- TERMINAL STATE MACHINE ---
 let currentStep = "PASSWORD"; 
 let currentUser = "UNKNOWN";
-const SECRET_PASSWORD = "k11w22e5b2"; // 👈 CHANGE YOUR ACTUAL SECRET PASSWORD HERE!
+const SECRET_PASSWORD = "k11w22e5b2"; 
 
-// Rebranded initialization text
-terminal.innerHTML = "Pony Palace Secret Password (k11w22e5b2):";
-promptChar.innerHTML = "KEY:";
+// Initialize boot text
+terminal.innerHTML = "Pony Palace Secret Password:\n";
+promptChar.innerHTML = ""; // No prefix character for password state
+
+// Mirror hidden typing to visual blinking text component
+input.addEventListener("input", () => {
+    fakeText.innerText = input.value;
+});
 
 // LISTEN FOR DATABASE MESSAGES
 chatRef.on("child_added", (snapshot) => {
@@ -105,19 +140,34 @@ chatRef.on("child_added", (snapshot) => {
     }
 });
 
+// LISTEN FOR WIPE COMMANDS FROM OTHER SESSIONS
+chatRef.on("value", (snapshot) => {
+    if (currentStep === "CHAT" && !snapshot.exists()) {
+        terminal.innerHTML = `--- CONSOLE LOG ARCHIVE ---\n[SYSTEM]: DATABASE PURGED BY ADMIN.\n\n`;
+        scrollToBottom();
+    }
+});
+
 // INTERCEPT ENTRY
 input.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         let val = input.value.trim();
         input.value = ""; 
+        fakeText.innerText = ""; // Reset fake text layout
 
         if (val === "") return;
+
+        // ADMIN CLEAR COMMAND
+        if (val === "/clearall" && currentStep === "CHAT") {
+            chatRef.set(null); // Completely wipes database values out of Firebase
+            return;
+        }
 
         // STEP 1: PASSWORD CHECK
         if (currentStep === "PASSWORD") {
             if (val === SECRET_PASSWORD) {
                 terminal.innerHTML += "ACCESS GRANTED.\n\nINITIALIZING OPERATOR PROTOCOL...\nENTER OPERATOR HANDLE:\n";
-                promptChar.innerHTML = "NAME:";
+                promptChar.innerHTML = "";
                 currentStep = "USERNAME";
             } else {
                 terminal.innerHTML += "ACCESS DENIED.\nINVALID KEY. TRY AGAIN:\n";
@@ -130,7 +180,7 @@ input.addEventListener("keydown", function(event) {
         if (currentStep === "USERNAME") {
             currentUser = val.toUpperCase();
             terminal.innerHTML = `DECRYPTING PALACE ARCHIVES... Welcome, ${currentUser}.\n\n--- PONY PALACE ONLINE ---\n\n`;
-            promptChar.innerHTML = "&gt;";
+            promptChar.innerHTML = "&gt; ";
             currentStep = "CHAT";
             
             loadChatHistory();
