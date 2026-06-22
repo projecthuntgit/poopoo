@@ -17,13 +17,12 @@
             overflow: hidden;
         }
 
-        /* Container now tightly wraps text to eliminate dead space */
         #terminal-container {
             flex: 1;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* Keeps text stacked at the top */
+            justify-content: flex-start;
         }
 
         #terminal {
@@ -42,14 +41,12 @@
             margin-right: 5px;
         }
 
-        /* Invisible real input box, capturing keystrokes in the background */
         #input {
             position: absolute;
             opacity: 0;
             pointer-events: none;
         }
 
-        /* Fake terminal view container */
         #fake-input-container {
             display: inline-flex;
             align-items: center;
@@ -57,17 +54,13 @@
             font-size: 16px;
         }
 
-        /* The retro blinking underscore cursor */
+        /* Fixed underscore cursor styling */
         #cursor {
             display: inline-block;
-            width: 10px;
-            height: 3px;
-            background-color: #00ff00;
-            margin-left: 2px;
+            color: #00ff00;
+            margin-left: 1px;
             animation: blink 0.8s infinite steps(2, start);
-            box-shadow: 0 0 5px #00ff00;
-            vertical-align: bottom;
-            margin-bottom: 2px;
+            text-shadow: 0 0 5px #00ff00;
         }
 
         @keyframes blink {
@@ -81,8 +74,8 @@
     <div>
         <div id="terminal"></div>
         <span class="input-line">
-            <span class="prompt" id="prompt-char">KEY:</span>
-            <span id="fake-input-container"><span id="fake-text"></span><span id="cursor"></span></span>
+            <span class="prompt" id="prompt-char"></span>
+            <span id="fake-input-container"><span id="fake-text"></span><span id="cursor">_</span></span>
         </span>
     </div>
 </div>
@@ -114,7 +107,6 @@ const input = document.getElementById("input");
 const fakeText = document.getElementById("fake-text");
 const promptChar = document.getElementById("prompt-char");
 
-// Keep hidden input focused on click
 document.addEventListener("click", () => input.focus());
 
 // --- TERMINAL STATE MACHINE ---
@@ -122,11 +114,10 @@ let currentStep = "PASSWORD";
 let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
 
-// Initialize boot text
-terminal.innerHTML = "Pony Palace Secret Password:\n";
-promptChar.innerHTML = ""; // No prefix character for password state
+// Initial prompt line config
+terminal.innerHTML = "Pony Palace Secret Password (k11w22e5b2):\n";
+promptChar.innerHTML = "";
 
-// Mirror hidden typing to visual blinking text component
 input.addEventListener("input", () => {
     fakeText.innerText = input.value;
 });
@@ -143,7 +134,7 @@ chatRef.on("child_added", (snapshot) => {
 // LISTEN FOR WIPE COMMANDS FROM OTHER SESSIONS
 chatRef.on("value", (snapshot) => {
     if (currentStep === "CHAT" && !snapshot.exists()) {
-        terminal.innerHTML = `--- CONSOLE LOG ARCHIVE ---\n[SYSTEM]: DATABASE PURGED BY ADMIN.\n\n`;
+        terminal.innerHTML = ""; // Clean wipe, no text banner
         scrollToBottom();
     }
 });
@@ -153,24 +144,30 @@ input.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         let val = input.value.trim();
         input.value = ""; 
-        fakeText.innerText = ""; // Reset fake text layout
+        fakeText.innerText = ""; 
 
-        if (val === "") return;
+        if (val === "" && currentStep !== "HOLD") return;
 
         // ADMIN CLEAR COMMAND
         if (val === "/clearall" && currentStep === "CHAT") {
-            chatRef.set(null); // Completely wipes database values out of Firebase
+            chatRef.set(null); 
             return;
         }
 
         // STEP 1: PASSWORD CHECK
         if (currentStep === "PASSWORD") {
             if (val === SECRET_PASSWORD) {
-                terminal.innerHTML += "ACCESS GRANTED.\n\nINITIALIZING OPERATOR PROTOCOL...\nENTER OPERATOR HANDLE:\n";
+                // Clear page to absolute blankness for processing simulation
+                terminal.innerHTML = "";
                 promptChar.innerHTML = "";
-                currentStep = "USERNAME";
+                currentStep = "HOLD"; // Freeze input interactions during processing
+                
+                setTimeout(() => {
+                    terminal.innerHTML = "ENTER OPERATOR HANDLE:\n";
+                    currentStep = "USERNAME";
+                }, 1500); // 1.5 second wait delay
             } else {
-                terminal.innerHTML += "ACCESS DENIED.\nINVALID KEY. TRY AGAIN:\n";
+                terminal.innerHTML += "ACCESS DENIED.\nTRY AGAIN:\n";
             }
             scrollToBottom();
             return;
@@ -179,11 +176,16 @@ input.addEventListener("keydown", function(event) {
         // STEP 2: ASSIGN USERNAME
         if (currentStep === "USERNAME") {
             currentUser = val.toUpperCase();
-            terminal.innerHTML = `DECRYPTING PALACE ARCHIVES... Welcome, ${currentUser}.\n\n--- PONY PALACE ONLINE ---\n\n`;
-            promptChar.innerHTML = "&gt; ";
-            currentStep = "CHAT";
-            
-            loadChatHistory();
+            // Clear page to absolute blankness again
+            terminal.innerHTML = "";
+            promptChar.innerHTML = "";
+            currentStep = "HOLD";
+
+            setTimeout(() => {
+                promptChar.innerHTML = "&gt; ";
+                currentStep = "CHAT";
+                loadChatHistory();
+            }, 1500); // 1.5 second wait delay
             return;
         }
 
@@ -203,7 +205,7 @@ input.addEventListener("keydown", function(event) {
 
 function loadChatHistory() {
     chatRef.once("value", (snapshot) => {
-        terminal.innerHTML = `--- CONSOLE LOG ARCHIVE ---\n\n`;
+        terminal.innerHTML = ""; // Keeps it raw and clean
         snapshot.forEach((childSnapshot) => {
             const data = childSnapshot.val();
             terminal.innerHTML += `[${data.timestamp}] ${data.user}: ${data.text}\n\n`;
