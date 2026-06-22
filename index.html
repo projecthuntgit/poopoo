@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WATCHMAN TERMINAL</title>
+
+    <style>
+
+        body {
+            background-color: black;
+            color: #00ff00;
+            font-family: monospace;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #terminal {
+            white-space: pre-wrap;
+            min-height: 90vh;
+        }
+
+        #input {
+            background: black;
+            color: #00ff00;
+            border: none;
+            outline: none;
+            font-family: monospace;
+            font-size: 16px;
+            width: 100%;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div id="terminal">
+WATCHMAN TERMINAL v0.1
+
+Connection Established
+
+>
+</div>
+
+<input id="input" autocomplete="off">
+
+<script>
+
+const terminal = document.getElementById("terminal");
+const input = document.getElementById("input");
+
+input.focus();
+
+input.addEventListener("keydown", function(event){
+
+    if(event.key === "Enter"){
+
+        let command = input.value;
+
+        terminal.innerHTML += " " + command + "\n";
+
+        if(command.toLowerCase() === "hello"){
+
+            terminal.innerHTML += "\nUNKNOWN:\nHello.\n";
+
+        }
+
+        else if(command.toLowerCase() === "who are you"){
+
+            terminal.innerHTML += "\nUNKNOWN:\nI don't think I should answer that.\n";
+
+        }
+
+        else{
+
+            terminal.innerHTML += "\nSYSTEM:\nCommand not recognized.\n";
+
+        }
+
+        terminal.innerHTML += "\n>\n";
+
+        input.value = "";
+
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+});
+
+</script>
+
+</body>
+</html>
