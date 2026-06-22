@@ -83,12 +83,13 @@ import { initializeApp } from "firebase/app";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAwGfqHi429gD7nWwYGpDTJu_HD8VH2TTw",
-  authDomain: "pony-palace-5a579.firebaseapp.com",
-  projectId: "pony-palace-5a579",
-  storageBucket: "pony-palace-5a579.firebasestorage.app",
-  messagingSenderId: "343906921946",
-  appId: "1:343906921946:web:87848ca367fca0800a64e3"
+    apiKey: "AIzaSyAwGfqHi429gD7nWwYGpDTJu_HD8VH2TTw",
+    authDomain: "pony-palace-5a579.firebaseapp.com",
+    databaseURL: "https://pony-palace-5a579-default-rtdb.firebaseio.com", // <-- Fixed & Added!
+    projectId: "pony-palace-5a579",
+    storageBucket: "pony-palace-5a579.firebasestorage.app",
+    messagingSenderId: "343906921946",
+    appId: "1:343906921946:web:87848ca367fca0800a64e3"
 };
 
 // Initialize Firebase
