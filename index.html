@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>WATCHMAN TERMINAL</title>
+    <title>PONY PALACE TERMINAL</title>
     <style>
         body {
             background-color: black;
@@ -88,17 +88,16 @@ const promptChar = document.getElementById("prompt-char");
 document.addEventListener("click", () => input.focus());
 
 // --- TERMINAL STATE MACHINE ---
-let currentStep = "PASSWORD"; // Can be PASSWORD, USERNAME, or CHAT
+let currentStep = "PASSWORD"; 
 let currentUser = "UNKNOWN";
-const SECRET_PASSWORD = "password123"; // 👈 CHANGE YOUR PASSWORD HERE!
+const SECRET_PASSWORD = "password123"; // 👈 CHANGE YOUR ACTUAL SECRET PASSWORD HERE!
 
-// Initialization text
-terminal.innerHTML = "=== WATCHMAN SECURITY SYSTEM ===\nERROR: SECURE LINK DISCONNECTED.\n\nENTER ACCESS KEY:\n";
+// Rebranded initialization text
+terminal.innerHTML = "=== PONY PALACE SECURITY SYSTEM ===\n\nPony Palace Secret Password:\n";
 promptChar.innerHTML = "KEY:";
 
 // LISTEN FOR DATABASE MESSAGES
 chatRef.on("child_added", (snapshot) => {
-    // Only print messages if the user has successfully bypassed security
     if (currentStep === "CHAT") {
         const data = snapshot.val();
         terminal.innerHTML += `[${data.timestamp}] ${data.user}: ${data.text}\n\n`;
@@ -110,7 +109,7 @@ chatRef.on("child_added", (snapshot) => {
 input.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         let val = input.value.trim();
-        input.value = ""; // Clear input immediately
+        input.value = ""; 
 
         if (val === "") return;
 
@@ -130,11 +129,10 @@ input.addEventListener("keydown", function(event) {
         // STEP 2: ASSIGN USERNAME
         if (currentStep === "USERNAME") {
             currentUser = val.toUpperCase();
-            terminal.innerHTML = `DECRYPTING TERMINAL ARCHIVES... Welcome, ${currentUser}.\n\n--- CONNECTION ESTABLISHED ---\n\n`;
+            terminal.innerHTML = `DECRYPTING PALACE ARCHIVES... Welcome, ${currentUser}.\n\n--- PONY PALACE ONLINE ---\n\n`;
             promptChar.innerHTML = "&gt;";
             currentStep = "CHAT";
             
-            // Force reload existing messages from Firebase now that we are logged in
             loadChatHistory();
             return;
         }
