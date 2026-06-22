@@ -118,12 +118,12 @@ const promptChar = document.getElementById("prompt-char");
 
 document.addEventListener("click", () => input.focus());
 
-let currentStep = "HOLD"; // Start on hold while intro text types out
+let currentStep = "HOLD"; 
 let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
 let isInitialLoad = true;
 
-// Kick off the initial boot sequence sequence
+// Boot text sequence
 typeText("Pony Palace Secret Password (k11w22e5b2):\n", 30, () => {
     currentStep = "PASSWORD";
 });
@@ -135,7 +135,6 @@ input.addEventListener("input", () => {
     }
 });
 
-// Helper function to simulate a machine typing text out letter by letter
 function typeText(text, speed, callback) {
     let i = 0;
     function worker() {
@@ -155,7 +154,6 @@ function isImageURL(text) {
     return (text.match(/\.(jpeg|jpg|gif|png)$/) != null) || text.startsWith("data:image");
 }
 
-// Global printing queue to ensure messages don't step on each other if they come in fast
 let printQueue = [];
 let isPrinting = false;
 
@@ -188,7 +186,6 @@ chatRef.on("child_added", (snapshot) => {
         const data = snapshot.val();
         
         if (isInitialLoad) {
-            // Drop historical messages directly onto screen without delay during login boot
             if (isImageURL(data.text)) {
                 terminal.innerHTML += `[${data.timestamp}] ${data.user}: sent an image:\n<img class="terminal-img" src="${data.text}">\n\n`;
             } else {
@@ -196,9 +193,18 @@ chatRef.on("child_added", (snapshot) => {
             }
             scrollToBottom();
         } else {
-            // Queue live messages up to print out smoothly text-by-text
             printQueue.push(data);
             if (!isPrinting) processPrintQueue();
+        }
+    }
+});
+
+// BACKGROUND CATCH-UP LISTENER (Fixes the Safari background spawn issue)
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        // If the app wakes up and notices missed messages stacked in the queue, start printing them
+        if (printQueue.length > 0 && !isPrinting) {
+            processPrintQueue();
         }
     }
 });
@@ -270,7 +276,6 @@ input.addEventListener("keydown", function(event) {
                 promptChar.innerHTML = "&gt; ";
                 currentStep = "CHAT";
                 
-                // Fetch full logs, render them, then mark startup sequence complete
                 chatRef.once("value", (snapshot) => {
                     terminal.innerHTML = ""; 
                     snapshot.forEach((childSnapshot) => {
@@ -282,7 +287,7 @@ input.addEventListener("keydown", function(event) {
                         }
                     });
                     scrollToBottom();
-                    isInitialLoad = false; // Turn on live text-crawl mode for all new messages!
+                    isInitialLoad = false; 
                 });
 
             }, 1000); 
