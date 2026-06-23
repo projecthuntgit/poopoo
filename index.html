@@ -116,24 +116,26 @@ const input = document.getElementById("input");
 const fakeText = document.getElementById("fake-text");
 const promptChar = document.getElementById("prompt-char");
 
-document.addEventListener("click", () => input.focus());
+// Intercept clicks to both focus inputs AND clear the alert screen if waiting
+document.addEventListener("click", () => {
+    input.focus();
+    if (currentStep === "AWAITING_TAP") {
+        triggerPasswordPrompt();
+    }
+});
 
 let currentStep = "HOLD"; 
 let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
 let isInitialLoad = true;
 
-// --- STEP 1: SILENTLY COUNT MESSAGES & BOOT TERMINAL ---
+// --- STEP 1: SILENTLY COUNT MESSAGES & CHOOSE SCENARIO ---
 function bootTerminalSequence() {
     chatRef.once("value", (snapshot) => {
         let msgCount = 0;
         if (snapshot.exists()) {
-            msgCount = snapshot.numChildren(); // Gets the exact count of lines in the database
+            msgCount = snapshot.numChildren();
         }
-
-        // Build the introductory block text
-        let welcomeText = `[ALERT]: ${msgCount} MESSAGE(S)\n\n`;
-        welcomeText += `Pony Palace Secret Password (k11w22e5b2):\n`;
 
         // Check the 2-hour session cache
         const sessionTime = localStorage.getItem("pony_palace_session");
@@ -143,21 +145,45 @@ function bootTerminalSequence() {
             typeText("SESSION VALIDATED.\nENTER OPERATOR HANDLE:\n", 30, () => {
                 currentStep = "USERNAME";
             });
-        } else {
-            localStorage.removeItem("pony_palace_session");
+            return;
+        }
+        
+        localStorage.removeItem("pony_palace_session");
+
+        // Conditional branching depending on message volume
+        if (msgCount > 0) {
+            let welcomeText = `[SYSTEM]: INCOMING LINK FOUND.\n`;
+            welcomeText += `[ALERT]: ${msgCount} MESSAGE(S) WAITING FOR DECRYPTION.\n\n`;
             typeText(welcomeText, 25, () => {
-                currentStep = "PASSWORD";
+                currentStep = "AWAITING_TAP"; // Freeze terminal until physical interaction
             });
+        } else {
+            // No messages? Skip straight to typing the password request
+            typePasswordPrompt();
         }
     });
 }
 
-// Start the sequence
+function triggerPasswordPrompt() {
+    currentStep = "HOLD";
+    terminal.innerHTML = ""; // Clear alert message
+    setTimeout(() => {
+        typePasswordPrompt();
+    }, 1000);
+}
+
+function typePasswordPrompt() {
+    typeText("Pony Palace Secret Password (k11w22e5b2):\n", 25, () => {
+        currentStep = "PASSWORD";
+    });
+}
+
+// Start sequence
 bootTerminalSequence();
 promptChar.innerHTML = "";
 
 input.addEventListener("input", () => {
-    if (currentStep !== "HOLD") {
+    if (currentStep !== "HOLD" && currentStep !== "AWAITING_TAP") {
         fakeText.innerText = input.value;
     }
 });
@@ -251,7 +277,7 @@ input.addEventListener("keydown", function(event) {
         input.value = ""; 
         fakeText.innerText = ""; 
 
-        if (currentStep === "HOLD") return;
+        if (currentStep === "HOLD" || currentStep === "AWAITING_TAP") return;
         if (val === "") return;
 
         // ADMIN CLEAR COMMAND
