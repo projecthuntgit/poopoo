@@ -123,10 +123,38 @@ let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
 let isInitialLoad = true;
 
-// Boot text sequence
-typeText("Pony Palace Secret Password (k11w22e5b2):\n", 30, () => {
-    currentStep = "PASSWORD";
-});
+// --- STEP 1: SILENTLY COUNT MESSAGES & BOOT TERMINAL ---
+function bootTerminalSequence() {
+    chatRef.once("value", (snapshot) => {
+        let msgCount = 0;
+        if (snapshot.exists()) {
+            msgCount = snapshot.numChildren(); // Gets the exact count of lines in the database
+        }
+
+        // Build the introductory block text
+        let welcomeText = `[SYSTEM]: INCOMING LINK FOUND.\n`;
+        welcomeText += `[ALERT]: ${msgCount} MESSAGE(S) WAITING FOR DECRYPTION.\n\n`;
+        welcomeText += `Pony Palace Secret Password (k11w22e5b2):\n`;
+
+        // Check the 2-hour session cache
+        const sessionTime = localStorage.getItem("pony_palace_session");
+        const twoHours = 2 * 60 * 60 * 1000;
+
+        if (sessionTime && (Date.now() - sessionTime < twoHours)) {
+            typeText("SESSION VALIDATED.\nENTER OPERATOR HANDLE:\n", 30, () => {
+                currentStep = "USERNAME";
+            });
+        } else {
+            localStorage.removeItem("pony_palace_session");
+            typeText(welcomeText, 25, () => {
+                currentStep = "PASSWORD";
+            });
+        }
+    });
+}
+
+// Start the sequence
+bootTerminalSequence();
 promptChar.innerHTML = "";
 
 input.addEventListener("input", () => {
@@ -199,10 +227,9 @@ chatRef.on("child_added", (snapshot) => {
     }
 });
 
-// BACKGROUND CATCH-UP LISTENER (Fixes the Safari background spawn issue)
+// BACKGROUND CATCH-UP LISTENER
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-        // If the app wakes up and notices missed messages stacked in the queue, start printing them
         if (printQueue.length > 0 && !isPrinting) {
             processPrintQueue();
         }
@@ -247,6 +274,8 @@ input.addEventListener("keydown", function(event) {
         // STEP 1: PASSWORD CHECK
         if (currentStep === "PASSWORD") {
             if (val === SECRET_PASSWORD) {
+                localStorage.setItem("pony_palace_session", Date.now());
+
                 terminal.innerHTML = "";
                 promptChar.innerHTML = "";
                 currentStep = "HOLD";
