@@ -115,6 +115,7 @@ const container = document.getElementById("terminal-container");
 const input = document.getElementById("input");
 const fakeText = document.getElementById("fake-text");
 const promptChar = document.getElementById("prompt-char");
+const cursor = document.getElementById("cursor");
 
 // Intercept clicks to both focus inputs AND clear the alert screen if waiting
 document.addEventListener("click", () => {
@@ -129,6 +130,9 @@ let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
 let isInitialLoad = true;
 
+// Hide the cursor by default during the initial boot check
+cursor.style.display = "none";
+
 // --- STEP 1: SILENTLY COUNT MESSAGES & CHOOSE SCENARIO ---
 function bootTerminalSequence() {
     chatRef.once("value", (snapshot) => {
@@ -142,6 +146,7 @@ function bootTerminalSequence() {
         const twoHours = 2 * 60 * 60 * 1000;
 
         if (sessionTime && (Date.now() - sessionTime < twoHours)) {
+            cursor.style.display = "inline-block"; // Show cursor for username entry
             typeText("SESSION VALIDATED.\nENTER OPERATOR HANDLE:\n", 30, () => {
                 currentStep = "USERNAME";
             });
@@ -152,10 +157,10 @@ function bootTerminalSequence() {
 
         // Conditional branching depending on message volume
         if (msgCount > 0) {
-            let welcomeText = `[SYSTEM]: INCOMING LINK FOUND.\n`;
-            welcomeText += `[ALERT]: ${msgCount} MESSAGE(S) WAITING FOR DECRYPTION.\n\n`;
+            let welcomeText = `[ALERT]: ${msgCount} NEW MESSAGE(S).\n\n`;
             typeText(welcomeText, 25, () => {
                 currentStep = "AWAITING_TAP"; // Freeze terminal until physical interaction
+                // Cursor stays hidden during this entire waiting phase
             });
         } else {
             // No messages? Skip straight to typing the password request
@@ -174,6 +179,7 @@ function triggerPasswordPrompt() {
 
 function typePasswordPrompt() {
     typeText("Pony Palace Secret Password (k11w22e5b2):\n", 25, () => {
+        cursor.style.display = "inline-block"; // Unhide the underscore cursor now that input is allowed
         currentStep = "PASSWORD";
     });
 }
