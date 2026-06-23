@@ -5,18 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PONY PALACE TERMINAL</title>
     <style>
-        body {
+        html, body {
             background-color: black;
             color: #00ff00;
             font-family: 'Courier New', monospace;
             margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            height: 100dvh; 
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
             box-sizing: border-box;
             text-shadow: 0 0 6px rgba(0, 255, 0, 0.75); 
-            overflow: hidden;
         }
 
         body::before {
@@ -31,12 +29,19 @@
         }
 
         #terminal-container {
-            flex: 1;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
             overflow-y: auto;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            padding-bottom: 20px;
+            /* Extra bottom padding gives space so the keyboard doesn't cover active typing */
+            padding-bottom: 40vh; 
+            -webkit-overflow-scrolling: touch;
         }
 
         #terminal {
@@ -71,7 +76,10 @@
         }
 
         #input {
-            position: absolute;
+            /* Kept near the top or fixed position to prevent mobile safari from violently shifting view layouts */
+            position: fixed;
+            top: 0;
+            left: 0;
             opacity: 0;
             pointer-events: none;
         }
@@ -96,8 +104,9 @@
         }
 
         @media (min-width: 768px) {
-            body {
+            #terminal-container {
                 padding: 30px;
+                padding-bottom: 10vh;
             }
             #terminal, .prompt, #fake-input-container, #cursor {
                 font-size: 18px;
@@ -117,7 +126,7 @@
     </div>
 </div>
 
-<input id="input" autocomplete="off" autofocus>
+<input id="input" autocomplete="off">
 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -211,6 +220,7 @@ promptChar.innerHTML = "";
 input.addEventListener("input", () => {
     if (currentStep !== "HOLD" && currentStep !== "AWAITING_TAP") {
         fakeText.innerText = input.value;
+        scrollToBottom(); // Ensure it scrolls right to the bottom as they type characters
     }
 });
 
@@ -244,9 +254,6 @@ function processPrintQueue() {
     isPrinting = true;
     const nextMsg = printQueue.shift();
 
-    // DYNAMIC SPEED CONTROL: 
-    // If there are more than 2 items left in the queue, we hyper-type at 2ms text / 5ms meta. 
-    // Otherwise, use normal pacing (15ms text / 20ms meta) for live transmissions.
     let textSpeed = printQueue.length > 2 ? 2 : 15;
     let metaSpeed = printQueue.length > 2 ? 5 : 20;
 
@@ -265,9 +272,7 @@ function processPrintQueue() {
     }
 }
 
-// LISTEN FOR DATABASE MESSAGES
 chatRef.on("child_added", (snapshot) => {
-    // We only process incoming live data here if initial loading has concluded
     if (currentStep === "CHAT" && !isInitialLoad) {
         const data = snapshot.val();
         printQueue.push(data);
@@ -347,18 +352,15 @@ input.addEventListener("keydown", function(event) {
                 promptChar.innerHTML = "&gt; ";
                 currentStep = "CHAT";
                 
-                // PUSH ENTIRE BACKLOG INTO PRINT QUEUE
                 chatRef.once("value", (snapshot) => {
                     terminal.innerHTML = ""; 
                     
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        printQueue.push(data); // Safely bundle messages into printing engine
+                        printQueue.push(data);
                     });
 
-                    isInitialLoad = false; // Initial sync complete
-                    
-                    // Fire up the high-speed processing queue
+                    isInitialLoad = false;
                     if (!isPrinting) processPrintQueue();
                 });
 
@@ -380,7 +382,11 @@ input.addEventListener("keydown", function(event) {
 });
 
 function scrollToBottom() {
+    // Deliberate double-pacing to ensure mobile render queues keep up with layout changes
     container.scrollTop = container.scrollHeight;
+    setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+    }, 30);
 }
 </script>
 
