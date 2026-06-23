@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PONY PALACE TERMINAL</title>
     <style>
         body {
@@ -9,12 +10,26 @@
             color: #00ff00;
             font-family: 'Courier New', monospace;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            height: 95vh;
-            text-shadow: 0 0 5px #00ff00; 
+            /* Using dynamic viewport height for perfect mobile sizing */
+            height: 100dvh; 
+            box-sizing: border-box;
+            text-shadow: 0 0 6px rgba(0, 255, 0, 0.75); 
             overflow: hidden;
+        }
+
+        /* Ambient scanline/CRT effect overlay to break up the empty space */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
         }
 
         #terminal-container {
@@ -23,20 +38,25 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
+            padding-bottom: 20px;
         }
 
         #terminal {
             white-space: pre-wrap;
             display: inline;
+            font-size: 16px;
+            line-height: 1.4;
         }
 
+        /* Responsive scaling for images */
         .terminal-img {
-            max-width: 300px;
-            max-height: 300px;
+            width: 100%;
+            max-width: 400px;
+            height: auto;
             display: block;
-            margin: 10px 0;
+            margin: 12px 0;
             border: 2px solid #00ff00;
-            box-shadow: 0 0 8px #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
             filter: grayscale(100%) brightness(1.2) contrast(1.2);
         }
 
@@ -44,11 +64,13 @@
             display: inline-flex;
             align-items: center;
             width: 100%;
+            margin-top: 5px;
         }
 
         .prompt {
             color: #00ff00;
             margin-right: 5px;
+            font-size: 16px;
         }
 
         #input {
@@ -69,11 +91,21 @@
             color: #00ff00;
             margin-left: 1px;
             animation: blink 0.8s infinite steps(2, start);
-            text-shadow: 0 0 5px #00ff00;
+            font-size: 16px;
         }
 
         @keyframes blink {
             to { visibility: hidden; }
+        }
+
+        /* Desktop media query to scale text up slightly on larger monitors */
+        @media (min-width: 768px) {
+            body {
+                padding: 30px;
+            }
+            #terminal, .prompt, #fake-input-container, #cursor {
+                font-size: 18px;
+            }
         }
     </style>
 </head>
@@ -117,7 +149,6 @@ const fakeText = document.getElementById("fake-text");
 const promptChar = document.getElementById("prompt-char");
 const cursor = document.getElementById("cursor");
 
-// Intercept clicks to both focus inputs AND clear the alert screen if waiting
 document.addEventListener("click", () => {
     input.focus();
     if (currentStep === "AWAITING_TAP") {
@@ -130,10 +161,8 @@ let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
 let isInitialLoad = true;
 
-// Hide the cursor by default during the initial boot check
 cursor.style.display = "none";
 
-// --- STEP 1: SILENTLY COUNT MESSAGES & CHOOSE SCENARIO ---
 function bootTerminalSequence() {
     chatRef.once("value", (snapshot) => {
         let msgCount = 0;
@@ -141,12 +170,11 @@ function bootTerminalSequence() {
             msgCount = snapshot.numChildren();
         }
 
-        // Check the 2-hour session cache
         const sessionTime = localStorage.getItem("pony_palace_session");
         const twoHours = 2 * 60 * 60 * 1000;
 
         if (sessionTime && (Date.now() - sessionTime < twoHours)) {
-            cursor.style.display = "inline-block"; // Show cursor for username entry
+            cursor.style.display = "inline-block"; 
             typeText("SESSION VALIDATED.\nENTER OPERATOR HANDLE:\n", 30, () => {
                 currentStep = "USERNAME";
             });
@@ -155,15 +183,12 @@ function bootTerminalSequence() {
         
         localStorage.removeItem("pony_palace_session");
 
-        // Conditional branching depending on message volume
         if (msgCount > 0) {
             let welcomeText = `[ALERT]: ${msgCount} NEW MESSAGE(S).\n\n`;
             typeText(welcomeText, 25, () => {
-                currentStep = "AWAITING_TAP"; // Freeze terminal until physical interaction
-                // Cursor stays hidden during this entire waiting phase
+                currentStep = "AWAITING_TAP"; 
             });
         } else {
-            // No messages? Skip straight to typing the password request
             typePasswordPrompt();
         }
     });
@@ -171,7 +196,7 @@ function bootTerminalSequence() {
 
 function triggerPasswordPrompt() {
     currentStep = "HOLD";
-    terminal.innerHTML = ""; // Clear alert message
+    terminal.innerHTML = ""; 
     setTimeout(() => {
         typePasswordPrompt();
     }, 1000);
@@ -179,12 +204,11 @@ function triggerPasswordPrompt() {
 
 function typePasswordPrompt() {
     typeText("Pony Palace Secret Password (k11w22e5b2):\n", 25, () => {
-        cursor.style.display = "inline-block"; // Unhide the underscore cursor now that input is allowed
+        cursor.style.display = "inline-block"; 
         currentStep = "PASSWORD";
     });
 }
 
-// Start sequence
 bootTerminalSequence();
 promptChar.innerHTML = "";
 
@@ -239,7 +263,6 @@ function processPrintQueue() {
     }
 }
 
-// LISTEN FOR DATABASE MESSAGES
 chatRef.on("child_added", (snapshot) => {
     if (currentStep === "CHAT") {
         const data = snapshot.val();
@@ -258,7 +281,6 @@ chatRef.on("child_added", (snapshot) => {
     }
 });
 
-// BACKGROUND CATCH-UP LISTENER
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         if (printQueue.length > 0 && !isPrinting) {
@@ -267,7 +289,6 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
-// LISTEN FOR WIPE COMMANDS
 chatRef.on("value", (snapshot) => {
     if (currentStep === "CHAT" && !snapshot.exists()) {
         terminal.innerHTML = ""; 
@@ -276,7 +297,6 @@ chatRef.on("value", (snapshot) => {
     }
 });
 
-// INTERCEPT ENTRY
 input.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         let val = input.value.trim();
@@ -286,7 +306,6 @@ input.addEventListener("keydown", function(event) {
         if (currentStep === "HOLD" || currentStep === "AWAITING_TAP") return;
         if (val === "") return;
 
-        // ADMIN CLEAR COMMAND
         if (val === "/clearall" && currentStep === "CHAT") {
             if (currentUser === "?") {
                 chatRef.set(null); 
@@ -302,7 +321,6 @@ input.addEventListener("keydown", function(event) {
             return;
         }
 
-        // STEP 1: PASSWORD CHECK
         if (currentStep === "PASSWORD") {
             if (val === SECRET_PASSWORD) {
                 localStorage.setItem("pony_palace_session", Date.now());
@@ -325,7 +343,6 @@ input.addEventListener("keydown", function(event) {
             return;
         }
 
-        // STEP 2: ASSIGN USERNAME
         if (currentStep === "USERNAME") {
             currentUser = val.toUpperCase();
             terminal.innerHTML = "";
@@ -354,7 +371,6 @@ input.addEventListener("keydown", function(event) {
             return;
         }
 
-        // STEP 3: REGULAR CHAT FUNCTION
         if (currentStep === "CHAT") {
             let now = new Date();
             let timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit', hour12: false});
