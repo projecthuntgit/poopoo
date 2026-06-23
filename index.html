@@ -13,14 +13,12 @@
             padding: 15px;
             display: flex;
             flex-direction: column;
-            /* Using dynamic viewport height for perfect mobile sizing */
             height: 100dvh; 
             box-sizing: border-box;
             text-shadow: 0 0 6px rgba(0, 255, 0, 0.75); 
             overflow: hidden;
         }
 
-        /* Ambient scanline/CRT effect overlay to break up the empty space */
         body::before {
             content: " ";
             display: block;
@@ -48,7 +46,6 @@
             line-height: 1.4;
         }
 
-        /* Responsive scaling for images */
         .terminal-img {
             width: 100%;
             max-width: 400px;
@@ -98,7 +95,6 @@
             to { visibility: hidden; }
         }
 
-        /* Desktop media query to scale text up slightly on larger monitors */
         @media (min-width: 768px) {
             body {
                 padding: 30px;
@@ -248,36 +244,34 @@ function processPrintQueue() {
     isPrinting = true;
     const nextMsg = printQueue.shift();
 
+    // DYNAMIC SPEED CONTROL: 
+    // If there are more than 2 items left in the queue, we hyper-type at 2ms text / 5ms meta. 
+    // Otherwise, use normal pacing (15ms text / 20ms meta) for live transmissions.
+    let textSpeed = printQueue.length > 2 ? 2 : 15;
+    let metaSpeed = printQueue.length > 2 ? 5 : 20;
+
     if (isImageURL(nextMsg.text)) {
         let metaText = `[${nextMsg.timestamp}] ${nextMsg.user}: sent an image:\n`;
-        typeText(metaText, 20, () => {
+        typeText(metaText, metaSpeed, () => {
             terminal.innerHTML += `<img class="terminal-img" src="${nextMsg.text}" alt="Terminal Payload">\n\n`;
             scrollToBottom();
             processPrintQueue();
         });
     } else {
         let fullLine = `[${nextMsg.timestamp}] ${nextMsg.user}: ${nextMsg.text}\n\n`;
-        typeText(fullLine, 15, () => {
+        typeText(fullLine, textSpeed, () => {
             processPrintQueue();
         });
     }
 }
 
+// LISTEN FOR DATABASE MESSAGES
 chatRef.on("child_added", (snapshot) => {
-    if (currentStep === "CHAT") {
+    // We only process incoming live data here if initial loading has concluded
+    if (currentStep === "CHAT" && !isInitialLoad) {
         const data = snapshot.val();
-        
-        if (isInitialLoad) {
-            if (isImageURL(data.text)) {
-                terminal.innerHTML += `[${data.timestamp}] ${data.user}: sent an image:\n<img class="terminal-img" src="${data.text}">\n\n`;
-            } else {
-                terminal.innerHTML += `[${data.timestamp}] ${data.user}: ${data.text}\n\n`;
-            }
-            scrollToBottom();
-        } else {
-            printQueue.push(data);
-            if (!isPrinting) processPrintQueue();
-        }
+        printQueue.push(data);
+        if (!isPrinting) processPrintQueue();
     }
 });
 
@@ -353,18 +347,19 @@ input.addEventListener("keydown", function(event) {
                 promptChar.innerHTML = "&gt; ";
                 currentStep = "CHAT";
                 
+                // PUSH ENTIRE BACKLOG INTO PRINT QUEUE
                 chatRef.once("value", (snapshot) => {
                     terminal.innerHTML = ""; 
+                    
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        if (isImageURL(data.text)) {
-                            terminal.innerHTML += `[${data.timestamp}] ${data.user}: sent an image:\n<img class="terminal-img" src="${data.text}">\n\n`;
-                        } else {
-                            terminal.innerHTML += `[${data.timestamp}] ${data.user}: ${data.text}\n\n`;
-                        }
+                        printQueue.push(data); // Safely bundle messages into printing engine
                     });
-                    scrollToBottom();
-                    isInitialLoad = false; 
+
+                    isInitialLoad = false; // Initial sync complete
+                    
+                    // Fire up the high-speed processing queue
+                    if (!isPrinting) processPrintQueue();
                 });
 
             }, 1000); 
