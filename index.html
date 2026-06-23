@@ -39,9 +39,9 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            /* Extra bottom padding gives space so the keyboard doesn't cover active typing */
-            padding-bottom: 40vh; 
+            padding-bottom: 45vh; /* Massive buffer room for keyboard space */
             -webkit-overflow-scrolling: touch;
+            scroll-behavior: auto; /* Instant tracking without smooth lag */
         }
 
         #terminal {
@@ -76,7 +76,6 @@
         }
 
         #input {
-            /* Kept near the top or fixed position to prevent mobile safari from violently shifting view layouts */
             position: fixed;
             top: 0;
             left: 0;
@@ -161,6 +160,13 @@ document.addEventListener("click", () => {
     }
 });
 
+// AUTO-SCROLL WHEN KEYBOARD OPENS
+// Triggers an immediate scroll anchor when window boundaries warp or focus changes
+window.addEventListener("resize", scrollToBottom);
+input.addEventListener("focus", () => {
+    setTimeout(scrollToBottom, 100);
+});
+
 let currentStep = "HOLD"; 
 let currentUser = "UNKNOWN";
 const SECRET_PASSWORD = "k11w22e5b2"; 
@@ -220,7 +226,7 @@ promptChar.innerHTML = "";
 input.addEventListener("input", () => {
     if (currentStep !== "HOLD" && currentStep !== "AWAITING_TAP") {
         fakeText.innerText = input.value;
-        scrollToBottom(); // Ensure it scrolls right to the bottom as they type characters
+        scrollToBottom(); 
     }
 });
 
@@ -230,7 +236,7 @@ function typeText(text, speed, callback) {
         if (i < text.length) {
             terminal.innerHTML += text.charAt(i);
             i++;
-            scrollToBottom();
+            scrollToBottom(); // Anchors down character-by-character
             setTimeout(worker, speed);
         } else if (callback) {
             callback();
@@ -382,11 +388,8 @@ input.addEventListener("keydown", function(event) {
 });
 
 function scrollToBottom() {
-    // Deliberate double-pacing to ensure mobile render queues keep up with layout changes
+    // Immediate structural layout scroll snap
     container.scrollTop = container.scrollHeight;
-    setTimeout(() => {
-        container.scrollTop = container.scrollHeight;
-    }, 30);
 }
 </script>
 
